@@ -9,6 +9,7 @@ enum Language {
     English,
     German,
     French,
+    Spanish,
     Russian,
     Korean,
 }
@@ -19,6 +20,7 @@ impl Language {
             Language::English => "en",
             Language::German => "de",
             Language::French => "fr",
+            Language::Spanish => "es",
             Language::Russian => "ru",
             Language::Korean => "ko",
         }
@@ -30,6 +32,7 @@ impl Language {
             Language::English => "english",
             Language::German => "german",
             Language::French => "french",
+            Language::Spanish => "spanish",
             Language::Russian => "russian",
             Language::Korean => "korean",
         }
@@ -41,6 +44,7 @@ impl Language {
             Language::English => "🇬🇧",
             Language::German => "🇩🇪",
             Language::French => "🇫🇷",
+            Language::Spanish => "🇪🇸",
             Language::Russian => "🇷🇺",
             Language::Korean => "🇰🇷",
         }
@@ -52,6 +56,7 @@ impl Language {
             "en" => Some(Language::English),
             "de" => Some(Language::German),
             "fr" => Some(Language::French),
+            "es" => Some(Language::Spanish),
             "ru" => Some(Language::Russian),
             "ko" => Some(Language::Korean),
             _ => None,
@@ -88,7 +93,7 @@ pub enum Command {
     #[command(description = "translate to specified language e.g. \
             `/translate en Hallo Welt!`. You can also reply to messages. \
             Translations from any language into the following lanuages \
-            are supported: en, de, fr, ru, ko ")]
+            are supported: en, de, fr, es, ru, ko")]
     Translate(String),
     #[command(description = "shortcut for /translate.")]
     T(String),
@@ -125,7 +130,7 @@ pub async fn handle_command(
                 None => {
                     bot.send_message(
                         msg.chat.id,
-                        "Invalid target language.\nValid languages: en, de, fr, ru, ko",
+                        "Invalid target language.\nValid languages: en, de, fr, es, ru, ko",
                     )
                     .reply_to_message_id(reply_to.id)
                     .await?;

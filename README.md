@@ -4,6 +4,7 @@ Target languages currently supported:
 - English
 - German
 - French
+- Spanish
 - Russian
 - Korean
 
