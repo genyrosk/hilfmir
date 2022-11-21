@@ -6,7 +6,7 @@ use crate::{AppError, Result};
 struct TranslateQuery {
     q: String,
     target: String,
-    source: String,
+    source: Option<String>,
     format: String,
     model: String,
     key: String,
@@ -18,14 +18,14 @@ impl TranslateQuery {
             q: query.to_string(),
             target: "en".to_string(),
             format: "text".to_string(),
-            source: "de".to_string(),
+            source: None,
             model: "base".to_string(),
             key: api_key.to_string(),
         }
     }
 
     pub fn set_source(mut self, source: String) -> Self {
-        self.source = source;
+        self.source = Some(source);
         self
     }
 
@@ -44,14 +44,15 @@ struct TranslateOutputData {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct OutputTranslations {
-    translations: Vec<Translation>,
+    pub translations: Vec<Translation>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-struct Translation {
-    translated_text: String,
-    model: String,
+pub struct Translation {
+    pub translated_text: String,
+    pub detected_source_language: Option<String>,
+    pub model: String,
 }
 
 pub struct GoogleCloudClient {
@@ -67,14 +68,18 @@ impl GoogleCloudClient {
         }
     }
 
-    pub async fn translate(&self, query: &str, source: &str, target: &str) -> Result<String> {
+    pub async fn translate(
+        &self,
+        query: &str,
+        target: &str,
+        source: Option<&str>,
+    ) -> Result<Translation> {
         log::debug!("Send query to Google Translate: {:?}", query);
 
-        let query = TranslateQuery::new(&query, &self.api_key)
-            .set_source(source.to_string())
-            .set_target(target.to_string());
-        // let query =
-        //     serde_json::to_string(&query).expect("Failed to Serialize query into json string");
+        let mut query = TranslateQuery::new(&query, &self.api_key).set_target(target.to_string());
+        if let Some(source) = source {
+            query = query.set_source(source.to_string());
+        }
 
         log::debug!("Serialize query object into json: {:?}", query);
 
@@ -102,6 +107,6 @@ impl GoogleCloudClient {
             });
         }
 
-        Ok(out.data.translations[0].translated_text.clone())
+        Ok(out.data.translations[0].clone())
     }
 }

@@ -5,75 +5,93 @@ use teloxide::utils::command::BotCommands;
 
 use crate::GoogleCloudClient;
 
-enum TranslationMap {
-    EnglishToGerman,
-    GermanToEnglish,
-}
-
 enum Language {
     English,
     German,
+    French,
+    Russian,
+    Korean,
 }
 
 impl Language {
-    fn code(&self) -> String {
+    pub fn code(&self) -> String {
         match self {
             Language::English => "en",
             Language::German => "de",
+            Language::French => "fr",
+            Language::Russian => "ru",
+            Language::Korean => "ko",
         }
         .to_owned()
     }
-    fn name(&self) -> String {
+
+    pub fn name(&self) -> String {
         match self {
             Language::English => "english",
             Language::German => "german",
+            Language::French => "french",
+            Language::Russian => "russian",
+            Language::Korean => "korean",
         }
         .to_owned()
     }
-    fn emoji(&self) -> String {
+
+    pub fn emoji(&self) -> String {
         match self {
             Language::English => "🇬🇧",
             Language::German => "🇩🇪",
+            Language::French => "🇫🇷",
+            Language::Russian => "🇷🇺",
+            Language::Korean => "🇰🇷",
         }
         .to_owned()
     }
+
+    pub fn parse_code(code: &str) -> Option<Self> {
+        match code {
+            "en" => Some(Language::English),
+            "de" => Some(Language::German),
+            "fr" => Some(Language::French),
+            "ru" => Some(Language::Russian),
+            "ko" => Some(Language::Korean),
+            _ => None,
+        }
+    }
 }
 
-impl TranslationMap {
-    pub fn source(&self) -> Language {
-        match self {
-            Self::EnglishToGerman => Language::English,
-            Self::GermanToEnglish => Language::German,
-        }
-    }
+fn parse_command_text(cmd_text: &str) -> Option<(Language, String)> {
+    let maybe_code = &cmd_text
+        .get(0..std::cmp::min(3, cmd_text.len()))
+        .map(|s| s.trim());
+    log::debug!("maybe_code: {:?}", maybe_code);
 
-    pub fn target(&self) -> Language {
-        match self {
-            Self::EnglishToGerman => Language::German,
-            Self::GermanToEnglish => Language::English,
-        }
-    }
+    let opt = maybe_code
+        .and_then(|code| Language::parse_code(code))
+        .and_then(|lang| {
+            cmd_text
+                .trim()
+                .get(3..)
+                .map(|text| (lang, text.to_string()))
+        });
+
+    opt
 }
 
 #[derive(BotCommands, Clone, Debug)]
 #[command(
     rename_rule = "lowercase",
-    description = "These commands are supported:"
+    description = "These commands are supported with languages:"
 )]
 pub enum Command {
     #[command(description = "display this text.")]
     Help,
-    #[command(description = "translate replied-to message")]
+    #[command(description = "translate to specified language e.g. \
+            `/translate en Hallo Welt!`. You can also reply to messages. \
+            Translations from any language into the following lanuages \
+            are supported: en, de, fr, ru, ko ")]
     Translate(String),
-    #[command(description = "translate replied-to message")]
+    #[command(description = "shortcut for /translate.")]
     T(String),
-    #[command(description = "demo: handle a username.")]
-    Username(String),
-    #[command(
-        description = "demo: handle a username and an age.",
-        parse_with = "split"
-    )]
-    UsernameAndAge { username: String, age: u8 },
 }
 
 pub async fn handle_command(
@@ -102,34 +120,23 @@ pub async fn handle_command(
         Command::Translate(cmd_text) | Command::T(cmd_text) => {
             log::debug!("cmd_text: {:?}", cmd_text);
             let cmd_text = cmd_text.trim();
-
-            let lang_param = &cmd_text
-                .get(0..std::cmp::min(3, cmd_text.len()))
-                .map(|s| s.trim());
-            log::debug!("lang_param: {:?}", lang_param);
-
-            let (lang_map, cmd_text) = match lang_param {
-                Some("de") => (
-                    TranslationMap::EnglishToGerman,
-                    cmd_text.trim().get(3..).unwrap_or(""),
-                ),
-                Some("en") => (
-                    TranslationMap::GermanToEnglish,
-                    cmd_text.trim().get(3..).unwrap_or(""),
-                ),
-                _ => (
-                    TranslationMap::GermanToEnglish,
-                    cmd_text.get(..).unwrap_or(""),
-                ),
+            let (target, text) = match parse_command_text(cmd_text) {
+                Some(ok) => ok,
+                None => {
+                    bot.send_message(
+                        msg.chat.id,
+                        "Invalid target language.\nValid languages: en, de, fr, ru, ko",
+                    )
+                    .reply_to_message_id(reply_to.id)
+                    .await?;
+                    return Ok(());
+                }
             };
-            let source = lang_map.source();
-            let target = lang_map.target();
 
-            let query_text = earlier_msg_text.unwrap_or(&cmd_text);
+            let query_text = earlier_msg_text.unwrap_or(&text);
             log::debug!(
-                "Translate or T command => cmd_text: {:?}, source: {}, target: {}, query_text: {}",
+                "Translate or T command => cmd_text: {:?},  target: {}, query_text: {}",
                 cmd_text,
-                source.name(),
                 target.name(),
                 query_text
             );
@@ -137,11 +144,7 @@ pub async fn handle_command(
             if query_text.len() == 0 {
                 bot.send_message(
                     msg.chat.id,
-                    format!(
-                        "{}➡️{}\nError: no text provided",
-                        source.emoji(),
-                        target.emoji()
-                    ),
+                    format!("➡️{}\nError: no text provided", target.emoji()),
                 )
                 .reply_to_message_id(reply_to.id)
                 .await?;
@@ -149,52 +152,25 @@ pub async fn handle_command(
             }
 
             let tanslation = google_cloud_client
-                .translate(query_text, &source.code(), &target.code())
+                .translate(query_text, &target.code(), None)
                 .await?;
+
+            let detected_source_language = Language::parse_code(
+                &tanslation
+                    .detected_source_language
+                    .unwrap_or("".to_string()),
+            );
+
             bot.send_message(
                 msg.chat.id,
-                format!("{}➡️{}\n{}", source.emoji(), target.emoji(), tanslation),
+                format!(
+                    "{}➡️{}\n{}",
+                    detected_source_language.map_or("".to_string(), |lang| lang.emoji()),
+                    target.emoji(),
+                    tanslation.translated_text
+                ),
             )
             .reply_to_message_id(reply_to.id)
-            .await?
-
-            // match input_text {
-            //     Some(input_text) => {
-            //         let tanslation = google_cloud_client
-            //             .translate(input_text, "de", "en")
-            //             .await?;
-            //         bot.send_message(
-            //             msg.chat.id,
-            //             format!(
-            //                 "Replying under message with id {} \ntext: {}\ntranslation: {}",
-            //                 reply_to.id.0, input_text, tanslation
-            //             ),
-            //         )
-            //         .reply_to_message_id(reply_to.id)
-            //         .await?
-            //     }
-            //     None => {
-            //         bot.send_message(
-            //             msg.chat.id,
-            //             format!(
-            //                 "Replying to message with id {} \ntext: {}\ntranslation: {}",
-            //                 reply_to.id.0, cmd_text
-            //             ),
-            //         )
-            //         .reply_to_message_id(reply_to.id)
-            //         .await?
-            //     }
-            // }
-        }
-        Command::Username(username) => {
-            bot.send_message(msg.chat.id, format!("Your username is @{username}."))
-                .await?
-        }
-        Command::UsernameAndAge { username, age } => {
-            bot.send_message(
-                msg.chat.id,
-                format!("Your username is @{username} and age is {age}."),
-            )
             .await?
         }
     };
