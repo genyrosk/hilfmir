@@ -5,6 +5,7 @@ use teloxide::utils::command::BotCommands;
 
 use crate::GoogleCloudClient;
 
+#[derive(Debug, Clone)]
 enum Language {
     English,
     German,
@@ -52,7 +53,7 @@ impl Language {
     }
 
     pub fn parse_code(code: &str) -> Option<Self> {
-        match code {
+        let lang = match code {
             "en" => Some(Language::English),
             "de" => Some(Language::German),
             "fr" => Some(Language::French),
@@ -60,26 +61,20 @@ impl Language {
             "ru" => Some(Language::Russian),
             "ko" => Some(Language::Korean),
             _ => None,
-        }
+        };
+        log::debug!("{} => {:?}", code, lang);
+        lang
     }
 }
 
-fn parse_command_text(cmd_text: &str) -> Option<(Language, String)> {
+fn parse_command_text(cmd_text: &str) -> (Option<Language>, Option<String>) {
     let maybe_code = &cmd_text
         .get(0..std::cmp::min(3, cmd_text.len()))
         .map(|s| s.trim());
-    log::debug!("maybe_code: {:?}", maybe_code);
 
-    let opt = maybe_code
-        .and_then(|code| Language::parse_code(code))
-        .and_then(|lang| {
-            cmd_text
-                .trim()
-                .get(3..)
-                .map(|text| (lang, text.to_string()))
-        });
-
-    opt
+    let lang = maybe_code.and_then(|code| Language::parse_code(code));
+    let text = cmd_text.trim().get(3..).map(|s| s.to_string());
+    (lang, text)
 }
 
 #[derive(BotCommands, Clone, Debug)]
@@ -105,17 +100,22 @@ pub async fn handle_command(
     msg: Message,
     cmd: Command,
 ) -> crate::Result<()> {
-    log::debug!("");
-    log::debug!("");
-    log::debug!("");
-    log::debug!("handle_command => cmd: {:?}, msg:", cmd,);
-    log::debug!("{}", serde_json::json!(msg));
+    log::info!("handle_command => cmd: {:?}, msg:", cmd,);
+    log::debug!("message json: {}", serde_json::json!(msg));
 
     let references_earlier_msg = msg.reply_to_message();
-    let earlier_msg_text = references_earlier_msg.and_then(|msg| msg.text());
-    log::debug!("earlier_msg_text: {:?}", earlier_msg_text);
+    let earlier_msg_text =
+        references_earlier_msg.and_then(|msg| msg.text().map(|text| text.to_string()));
+    log::info!("earlier_msg_text: {:?}", earlier_msg_text);
 
     let reply_to = msg.reply_to_message().unwrap_or(&msg);
+
+    let bot_send_message = |text: String| async {
+        bot.clone()
+            .send_message(msg.chat.id, text)
+            .reply_to_message_id(reply_to.id)
+            .await
+    };
 
     match cmd {
         Command::Help => {
@@ -123,41 +123,35 @@ pub async fn handle_command(
                 .await?
         }
         Command::Translate(cmd_text) | Command::T(cmd_text) => {
-            log::debug!("cmd_text: {:?}", cmd_text);
             let cmd_text = cmd_text.trim();
             let (target, text) = match parse_command_text(cmd_text) {
-                Some(ok) => ok,
-                None => {
-                    bot.send_message(
-                        msg.chat.id,
-                        "Invalid target language.\nValid languages: en, de, fr, es, ru, ko",
+                (Some(lang), text) => (lang, text),
+                (None, _) => {
+                    bot_send_message(
+                        "Invalid target language.\nValid languages: en, de, fr, es, ru, ko"
+                            .to_string(),
                     )
-                    .reply_to_message_id(reply_to.id)
                     .await?;
                     return Ok(());
                 }
             };
 
-            let query_text = earlier_msg_text.unwrap_or(&text);
-            log::debug!(
-                "Translate or T command => cmd_text: {:?},  target: {}, query_text: {}",
-                cmd_text,
-                target.name(),
-                query_text
-            );
+            let query_text = earlier_msg_text.or(text);
+            log::info!("target: {:?}, query_text: {:?}", target, query_text);
 
-            if query_text.len() == 0 {
-                bot.send_message(
-                    msg.chat.id,
-                    format!("➡️{}\nError: no text provided", target.emoji()),
+            if query_text.is_none() || query_text.clone().map_or(0, |s| s.len()) == 0 {
+                bot_send_message(
+                    "No text provided. Reply to a message \
+                    or write text after the command \ne.g. `/t en some text`"
+                        .to_string(),
                 )
-                .reply_to_message_id(reply_to.id)
                 .await?;
                 return Ok(());
             }
 
+            let query_text = query_text.unwrap();
             let tanslation = google_cloud_client
-                .translate(query_text, &target.code(), None)
+                .translate(&query_text, &target.code(), None)
                 .await?;
 
             let detected_source_language = Language::parse_code(
@@ -165,17 +159,18 @@ pub async fn handle_command(
                     .detected_source_language
                     .unwrap_or("".to_string()),
             );
+            log::info!(
+                "detected_source_language: {:?}, translation: {:?}",
+                detected_source_language,
+                tanslation.translated_text
+            );
 
-            bot.send_message(
-                msg.chat.id,
-                format!(
-                    "{}➡️{}\n{}",
-                    detected_source_language.map_or("".to_string(), |lang| lang.emoji()),
-                    target.emoji(),
-                    tanslation.translated_text
-                ),
-            )
-            .reply_to_message_id(reply_to.id)
+            bot_send_message(format!(
+                "{}➡️{}\n{}",
+                detected_source_language.map_or("".to_string(), |lang| lang.emoji()),
+                target.emoji(),
+                tanslation.translated_text
+            ))
             .await?
         }
     };

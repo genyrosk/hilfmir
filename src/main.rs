@@ -14,7 +14,7 @@ fn authorize_chat(config: Arc<Config>, message: Message) -> bool {
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
     pretty_env_logger::init();
-    log::info!("Starting throw dice bot...");
+    log::info!("Starting Hilfmir bot...");
 
     let allowed_chat_ids = std::env::var("ALLOWED_CHAT_IDS")
         .unwrap()

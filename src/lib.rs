@@ -7,4 +7,3 @@ pub use error::AppError;
 pub use translate::GoogleCloudClient;
 
 type Result<T> = std::result::Result<T, AppError>;
-// type Result<T> = anyhow::Result<T>;
