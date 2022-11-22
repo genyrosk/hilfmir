@@ -3,7 +3,7 @@ use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::utils::command::BotCommands;
 
-use crate::GoogleCloudClient;
+use crate::{Auth, GoogleCloudClient};
 
 #[derive(Debug, Clone)]
 enum Language {
@@ -96,11 +96,17 @@ pub enum Command {
 
 pub async fn handle_command(
     bot: Bot,
+    auth: Arc<Auth>,
     google_cloud_client: Arc<GoogleCloudClient>,
     msg: Message,
     cmd: Command,
 ) -> crate::Result<()> {
-    log::info!("handle_command => cmd: {:?}, msg:", cmd,);
+    log::info!(
+        "new message from chat [{}] \"{}\": {:?}, cmd:",
+        msg.chat.id,
+        auth.get_chat_name(&msg.chat.id).unwrap_or_default(),
+        cmd,
+    );
     log::debug!("message json: {}", serde_json::json!(msg));
 
     let references_earlier_msg = msg.reply_to_message();
@@ -155,7 +161,7 @@ pub async fn handle_command(
                 return Ok(());
             }
 
-            let query_text = query_text.unwrap(); // runtime invariant
+            let query_text = query_text.unwrap(); //
             let tanslation = google_cloud_client
                 .translate(&query_text, &target.code(), None)
                 .await?;

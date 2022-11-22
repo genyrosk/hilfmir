@@ -1,44 +1,24 @@
 use std::sync::Arc;
 use teloxide::prelude::*;
 
-use hilfmir::{handle_command, Command, GoogleCloudClient};
-
-pub struct Config {
-    allowed_chat_ids: Vec<i64>,
-}
-
-fn authorize_chat(config: Arc<Config>, message: Message) -> bool {
-    let chat_id = message.chat.id;
-    let is_authorized = config.allowed_chat_ids.contains(&chat_id.0);
-    if !is_authorized {
-        log::warn!("Chat [{}] is not authorized", &chat_id.0);
-    }
-    is_authorized
-}
+use hilfmir::{handle_command, load_config, Auth, Command, GoogleCloudClient};
 
 #[tokio::main]
 async fn main() {
     pretty_env_logger::init();
     log::info!("Starting Hilfmir bot...");
 
-    let allowed_chat_ids = std::env::var("ALLOWED_CHAT_IDS")
-        .expect("ALLOWED_CHAT_IDS not specified")
-        .split(',')
-        .filter_map(|s| s.parse::<i64>().ok())
-        .collect::<Vec<_>>();
-    log::info!("Allowed Chat IDs: {:?}", allowed_chat_ids);
-    let config = Arc::new(Config { allowed_chat_ids });
+    let config = Arc::new(load_config());
+    let auth = Arc::new(Auth::new(&config));
 
-    let google_cloud_api_key = std::env::var("GOOGLE_CLOUD_API_KEY")
-        .expect("GOOGLE_CLOUD_API_KEY not specified");
     let google_cloud_client =
-        Arc::new(GoogleCloudClient::new(google_cloud_api_key));
+        Arc::new(GoogleCloudClient::new(config.google_cloud_api_key.clone()));
 
-    let bot = Bot::from_env();
+    let bot = Bot::new(config.teloxide_token.expose_secret());
 
     let handler = Update::filter_message().branch(
-        dptree::filter(|msg: Message, config: Arc<Config>| {
-            authorize_chat(config, msg)
+        dptree::filter(|msg: Message, auth: Arc<Auth>| {
+            auth.message_is_authorized(msg)
         })
         .filter_command::<Command>()
         .endpoint(handle_command),
@@ -46,7 +26,7 @@ async fn main() {
 
     Dispatcher::builder(bot, handler)
         // Pass the shared state to the handler as a dependency.
-        .dependencies(dptree::deps![config, google_cloud_client.clone()])
+        .dependencies(dptree::deps![config, auth, google_cloud_client.clone()])
         .enable_ctrlc_handler()
         .build()
         .dispatch()

@@ -4,6 +4,12 @@ build:
 build-release:
   cargo build --release
 
+lint:
+  cargo clippy
+
+format:
+  cargo fmt
+
 run:
   RUST_BACKTRACE=1 cargo run
 

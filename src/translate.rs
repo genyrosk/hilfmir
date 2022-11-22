@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{AppError, Result};
+use crate::{config::SecretString, AppError, Result};
 
 #[derive(Debug, Serialize)]
 struct TranslateQuery {
@@ -13,14 +13,14 @@ struct TranslateQuery {
 }
 
 impl TranslateQuery {
-    pub fn new(query: &str, api_key: &str) -> Self {
+    pub fn new(query: &str, api_key: &SecretString) -> Self {
         TranslateQuery {
             q: query.to_string(),
             target: "en".to_string(),
             format: "text".to_string(),
             source: None,
             model: "base".to_string(),
-            key: api_key.to_string(),
+            key: api_key.expose_secret().to_string(),
         }
     }
 
@@ -56,12 +56,12 @@ pub struct Translation {
 }
 
 pub struct GoogleCloudClient {
-    pub api_key: String,
+    pub api_key: SecretString,
     pub http_client: reqwest::Client,
 }
 
 impl GoogleCloudClient {
-    pub fn new(api_key: String) -> Self {
+    pub fn new(api_key: SecretString) -> Self {
         Self {
             api_key,
             http_client: reqwest::Client::new(),
