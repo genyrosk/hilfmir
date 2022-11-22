@@ -1,6 +1,7 @@
-use hilfmir::{handle_command, Command, GoogleCloudClient};
 use std::sync::Arc;
 use teloxide::prelude::*;
+
+use hilfmir::{handle_command, Command, GoogleCloudClient};
 
 pub struct Config {
     allowed_chat_ids: Vec<i64>,
