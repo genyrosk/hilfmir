@@ -15,7 +15,7 @@ fn authorize_chat(config: Arc<Config>, message: Message) -> bool {
     is_authorized
 }
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main]
 async fn main() {
     pretty_env_logger::init();
     log::info!("Starting Hilfmir bot...");
