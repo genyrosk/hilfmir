@@ -111,8 +111,7 @@ pub async fn handle_command(
     let reply_to = msg.reply_to_message().unwrap_or(&msg);
 
     let bot_send_message = |text: String| async {
-        bot.clone()
-            .send_message(msg.chat.id, text)
+        bot.send_message(msg.chat.id, text)
             .reply_to_message_id(reply_to.id)
             .await
     };
@@ -138,10 +137,14 @@ pub async fn handle_command(
             };
 
             let query_text = earlier_msg_text.or(text);
-            log::info!("target: {:?}, query_text: {:?}", target, query_text);
+            log::info!(
+                "target: {:?}, query_text: {:?}",
+                target.name(),
+                query_text
+            );
 
             if query_text.is_none()
-                || query_text.clone().map_or(0, |s| s.len()) == 0
+                || query_text.as_ref().map_or(0, |s| s.len()) == 0
             {
                 bot_send_message(
                     "No text provided. Reply to a message \
@@ -164,7 +167,7 @@ pub async fn handle_command(
             );
             log::info!(
                 "detected_source_language: {:?}, translation: {:?}",
-                detected_source_language,
+                detected_source_language.as_ref().map(|lang| lang.name()),
                 tanslation.translated_text
             );
 
