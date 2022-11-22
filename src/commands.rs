@@ -72,7 +72,7 @@ fn parse_command_text(cmd_text: &str) -> (Option<Language>, Option<String>) {
         .get(0..std::cmp::min(3, cmd_text.len()))
         .map(|s| s.trim());
 
-    let lang = maybe_code.and_then(|code| Language::parse_code(code));
+    let lang = maybe_code.and_then(Language::parse_code);
     let text = cmd_text.trim().get(3..).map(|s| s.to_string());
     (lang, text)
 }
@@ -155,15 +155,13 @@ pub async fn handle_command(
                 return Ok(());
             }
 
-            let query_text = query_text.unwrap();
+            let query_text = query_text.unwrap(); // runtime invariant
             let tanslation = google_cloud_client
                 .translate(&query_text, &target.code(), None)
                 .await?;
 
             let detected_source_language = Language::parse_code(
-                &tanslation
-                    .detected_source_language
-                    .unwrap_or("".to_string()),
+                &tanslation.detected_source_language.unwrap_or_default(),
             );
             log::info!(
                 "detected_source_language: {:?}, translation: {:?}",

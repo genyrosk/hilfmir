@@ -22,5 +22,10 @@ tokio = { version = "1.8", features = ["rt-multi-thread", "macros"] }
 # Use vendored openssl. We don't depend on it directly.
 openssl = { version = "0.10.41", features = ["vendored"], optional = true }
 
+
+[dev-dependencies]
+clippy = { version = "*" }
+
+
 [features]
 vendored-openssl = ["openssl"]

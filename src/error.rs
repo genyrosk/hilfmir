@@ -14,7 +14,7 @@ impl std::error::Error for AppError {}
 impl From<reqwest::Error> for AppError {
     fn from(e: reqwest::Error) -> Self {
         AppError {
-            msg: format!("reqwest::Error: {}", e.to_string()),
+            msg: format!("reqwest::Error: {}", e),
         }
     }
 }
@@ -22,7 +22,7 @@ impl From<reqwest::Error> for AppError {
 impl From<teloxide::RequestError> for AppError {
     fn from(e: teloxide::RequestError) -> Self {
         AppError {
-            msg: format!("teloxide::RequestError: {}", e.to_string()),
+            msg: format!("teloxide::RequestError: {}", e),
         }
     }
 }

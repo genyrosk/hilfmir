@@ -76,7 +76,7 @@ impl GoogleCloudClient {
     ) -> Result<Translation> {
         log::debug!("Send query to Google Translate: {:?}", query);
 
-        let mut query = TranslateQuery::new(&query, &self.api_key)
+        let mut query = TranslateQuery::new(query, &self.api_key)
             .set_target(target.to_string());
         if let Some(source) = source {
             query = query.set_source(source.to_string());
@@ -102,7 +102,7 @@ impl GoogleCloudClient {
 
         let out = res.json::<TranslateOutputData>().await?;
 
-        if out.data.translations.len() == 0 {
+        if out.data.translations.is_empty() {
             return Err(AppError {
                 msg: "Bad Response: Translations are missing".to_string(),
             });

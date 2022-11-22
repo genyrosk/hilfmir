@@ -9,7 +9,7 @@ pub struct Config {
 fn authorize_chat(config: Arc<Config>, message: Message) -> bool {
     let chat_id = message.chat.id;
     let is_authorized = config.allowed_chat_ids.contains(&chat_id.0);
-    if is_authorized == false {
+    if !is_authorized {
         log::warn!("Chat [{}] is not authorized", &chat_id.0);
     }
     is_authorized
@@ -22,7 +22,7 @@ async fn main() {
 
     let allowed_chat_ids = std::env::var("ALLOWED_CHAT_IDS")
         .expect("ALLOWED_CHAT_IDS not specified")
-        .split(",")
+        .split(',')
         .filter_map(|s| s.parse::<i64>().ok())
         .collect::<Vec<_>>();
     log::info!("Allowed Chat IDs: {:?}", allowed_chat_ids);
