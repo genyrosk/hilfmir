@@ -104,8 +104,8 @@ pub async fn handle_command(
     log::debug!("message json: {}", serde_json::json!(msg));
 
     let references_earlier_msg = msg.reply_to_message();
-    let earlier_msg_text =
-        references_earlier_msg.and_then(|msg| msg.text().map(|text| text.to_string()));
+    let earlier_msg_text = references_earlier_msg
+        .and_then(|msg| msg.text().map(|text| text.to_string()));
     log::info!("earlier_msg_text: {:?}", earlier_msg_text);
 
     let reply_to = msg.reply_to_message().unwrap_or(&msg);
@@ -128,7 +128,8 @@ pub async fn handle_command(
                 (Some(lang), text) => (lang, text),
                 (None, _) => {
                     bot_send_message(
-                        "Invalid target language.\nValid languages: en, de, fr, es, ru, ko"
+                        "Invalid target language.\nValid languages: \
+                        en, de, fr, es, ru, ko"
                             .to_string(),
                     )
                     .await?;
@@ -139,7 +140,9 @@ pub async fn handle_command(
             let query_text = earlier_msg_text.or(text);
             log::info!("target: {:?}, query_text: {:?}", target, query_text);
 
-            if query_text.is_none() || query_text.clone().map_or(0, |s| s.len()) == 0 {
+            if query_text.is_none()
+                || query_text.clone().map_or(0, |s| s.len()) == 0
+            {
                 bot_send_message(
                     "No text provided. Reply to a message \
                     or write text after the command \ne.g. `/t en some text`"
@@ -167,7 +170,8 @@ pub async fn handle_command(
 
             bot_send_message(format!(
                 "{}➡️{}\n{}",
-                detected_source_language.map_or("".to_string(), |lang| lang.emoji()),
+                detected_source_language
+                    .map_or("".to_string(), |lang| lang.emoji()),
                 target.emoji(),
                 tanslation.translated_text
             ))

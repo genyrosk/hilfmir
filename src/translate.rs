@@ -76,7 +76,8 @@ impl GoogleCloudClient {
     ) -> Result<Translation> {
         log::debug!("Send query to Google Translate: {:?}", query);
 
-        let mut query = TranslateQuery::new(&query, &self.api_key).set_target(target.to_string());
+        let mut query = TranslateQuery::new(&query, &self.api_key)
+            .set_target(target.to_string());
         if let Some(source) = source {
             query = query.set_source(source.to_string());
         }
