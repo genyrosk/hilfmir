@@ -1,3 +1,6 @@
+![Rust CI](https://github.com/genyrosk/hilfmir/actions/workflows/rust.yml/badge.svg)
+
+
 # Hilfmir: A Telegram language translation bot
 
 Target languages currently supported:
@@ -25,4 +28,11 @@ vendored-openssl = ["openssl"]
 
 ```
 
+# Webhook
 
+To configure a webhook that Telegram can send push notifications, set the following environment variables:
+
+```sh
+WEBHOOK_MODE=true
+DOMAIN_HOST=your.domain
+```

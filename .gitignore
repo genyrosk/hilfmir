@@ -20,3 +20,9 @@ Cargo.lock
 .env
 *.env
 config.toml
+
+# SSL tunnel with tunnel.pyjam.as
+tunnel.conf
+
+# Heap analysis
+*.zst
