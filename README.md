@@ -1,5 +1,15 @@
-![Rust CI](https://github.com/genyrosk/hilfmir/actions/workflows/rust.yml/badge.svg)
-
+<p align="left">
+    <a href="https://github.com/genyrosk/hilfmir/actions">
+        <img src="https://github.com/genyrosk/hilfmir/actions/workflows/rust.yml/badge.svg">
+    </a>
+    <a href="https://github.com/genyrosk/hilfmir/releases/">
+        <img src="https://img.shields.io/github/release/genyrosk/hilfmir.svg">
+    </a>
+    <a href="https://www.rust-lang.org/">
+        <img src="https://img.shields.io/badge/Rust-1.65.0-orange">
+    </a>
+    <img src="https://img.shields.io/badge/Telegram-2CA5E0?style=flat&logo=telegram&logoColor=white">
+</p>
 
 # Hilfmir: A Telegram language translation bot
 
@@ -36,3 +46,7 @@ To configure a webhook that Telegram can send push notifications, set the follow
 WEBHOOK_MODE=true
 DOMAIN_HOST=your.domain
 ```
+
+# TODO:
+
+Add Github Action to push to Dockerhub when releasing.
