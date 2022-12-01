@@ -47,7 +47,7 @@ jobs:
           command: clippy
           args: -- -D warnings
 
-      - name: Generate a changelog
+      - name: Generate Changelog
         uses: orhun/git-cliff-action@v1
         with:
           config: cliff.toml
