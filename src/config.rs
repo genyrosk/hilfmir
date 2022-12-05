@@ -186,6 +186,7 @@ pub fn get_config_from_env() -> EnvConfig {
         .expect("BIND_PORT value has to be an integer");
 
     let is_webhook_mode_enabled: bool = var("WEBHOOK_MODE")
+        .map(|val| val.to_lowercase())
         .unwrap_or_else(|_| "false".to_string())
         .parse()
         .expect(

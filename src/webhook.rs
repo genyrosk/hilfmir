@@ -8,6 +8,9 @@ use teloxide::stop::{mk_stop_token, StopToken};
 
 use crate::Config;
 
+// Original implementation:
+// https://github.com/zamazan4ik/npaperbot-telegram/blob/2eb14ec7121153768deb0d3763451ae58fa78572/src/webhook.rs
+
 async fn telegram_request(
     input: String,
     tx: axum::extract::Extension<
